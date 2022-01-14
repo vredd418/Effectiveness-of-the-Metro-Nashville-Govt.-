@@ -1,5 +1,7 @@
-
 library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(leafpop)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
@@ -19,7 +21,7 @@ shinyUI(fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-            plotOutput("distPlot")
+            leafletOutput("mymap", width = "100%", height = "100%")
         )
     )
 ))

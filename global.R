@@ -9,12 +9,13 @@ library(sf)
 library(tigris)
 census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 
-df = read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json")
-df <- df %>% subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
-                        "date_time_closed", "mapped_location.latitude", "mapped_location.longitude"))
-df <- df %>% filter(year(date_time_opened) == 2019) %>% 
-  filter(year(date_time_closed) == 2019) %>% 
-  filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.)))
+df = read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>% 
+  subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
+                        "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>% 
+  filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>% 
+  filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.))) %>% 
+  mutate_at(vars(mapped_location.latitude, mapped_location.longitude), as.numeric) %>% 
+  mutate(duration = date_time_closed - date_time_opened)
 
 tract <- readOGR(dsn = "C:/Users/vredd/Documents/data_science_projects/Midcourse project/Effectiveness-of-the-Metro-Nashville-Govt.-/data",
                 layer = "tl_2019_47_tract") %>% 
@@ -32,6 +33,22 @@ census <- get_acs(geography = "tract",
 
 
 tract_census <- geo_join(tract, census, by = "GEOID") %>% 
-  select(., -c(GEOID.1, NAME.1))
+  .[,-(13:14)]
 
+# Choices for choropleth variable selectInput
+choro_variables <- variable.names(subset(tract_census@data, select = c(white, asian, hispanic, black, population, median_age, median_income)))
+
+# Initialize leaflet map function
+draw_base_map <- function() {
+  leaflet(options = leafletOptions(minZoom = 10, maxZoom = 25)) %>%
+    addProviderTiles("CartoDB.Positron") 
+}
+
+# Color palette for choropleth 
+pal <- colorNumeric(palette = "viridis", domain = NULL)
+
+# Update choropleth function
+update_choropleth <- function(mymap, tract_census, chor_vars) {
+  
+}
 
