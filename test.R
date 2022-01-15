@@ -6,7 +6,7 @@ choro_variables <- variable.names(subset(tract_census@data, select = c(white, as
 
 pal <- colorNumeric("viridis", domain = tract_census@data$median_income)
 
-leaflet(data = df[1:5000,], options = leafletOptions(minZoom = 10, maxZoom = 25)) %>% 
+leaflet(data = df, options = leafletOptions(minZoom = 10, maxZoom = 25)) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addMarkers(lng = ~mapped_location.longitude, lat = ~mapped_location.latitude, 
              label = ~sprintf("<strong>%s</strong><br/>%s<br/>%d%s", case_request, case_subrequest, duration, " seconds") %>% lapply(HTML),
@@ -23,4 +23,5 @@ leaflet(data = df[1:5000,], options = leafletOptions(minZoom = 10, maxZoom = 25)
               
               
   
+
 
