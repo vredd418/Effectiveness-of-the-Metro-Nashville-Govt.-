@@ -8,8 +8,9 @@ shinyUI(fluidPage(
 
     # Application title
     titlePanel("Effectiveness of Metro Nashville Govt."),
-    
-    mainPanel(leafletOutput("mymap", width = "100%", height = "100%"),
-              absolutePanel(top = 10, right = 10, 
-                            selectInput("chor_vars", "Choropleth variables", c(choro_variables))))
+    absolutePanel(top = 10, right = 10,
+                  selectInput("chor_vars", "Choropleth Variables", c(choro_variables))),
+    absolutePanel(bottom = 10, left = 10,
+                  selectInput("req_vars", "Types of Requests", c(distinct(df, case_request)))),
+    mainPanel(leafletOutput("mymap", width = "100%", height = "100%"))
 ))

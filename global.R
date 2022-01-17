@@ -8,10 +8,13 @@ library(tidycensus)
 library(sf)
 library(tigris)
 library(htmltools)
+library(prevR)
+library(leaflet)
+library(stats)
 census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 
 # Read in Metro Nashville Govt data
-df = read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>% 
+df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>% 
   subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
                         "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>% 
   filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>% 
@@ -40,17 +43,23 @@ census <- get_acs(geography = "tract",
 tract_census <- geo_join(tract, census, by = "GEOID") %>% 
   .[,-(13:14)]
 
+# Convert to sf in order to filter out points outside of Davidson County
+#tract_census <- st_as_sf(tract_census)
+
 # Filter out point data outside of Davidson County
-df_filtered <- st_join(df, tract_census)
+#df_filtered <- st_join(df, tract_census, join = st_contains)
 
 # Choices for choropleth variable 
 choro_variables <- variable.names(subset(tract_census@data, 
-                                         select = c(white, asian, hispanic, black, population, median_age, median_income)))
+                                         select = c(white, asian, hispanic, black, 
+                                                    population, median_age, median_income)))
 
 # Initialize leaflet map function
-draw_base_map <- function() {
-  leaflet(options = leafletOptions(minZoom = 10, maxZoom = 25)) %>%
+draw_base_map <- function(df) {
+  leaflet(data = df, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>%
     addProviderTiles("CartoDB.Positron") %>% 
+    addMarkers(lat = ~mapped_location.latitude, ~mapped_location.longitude,
+               clusterOptions = markerClusterOptions()) %>% 
     setView(lat = 36.163934, lng = -86.774893, zoom = 10)
 }
 
@@ -60,7 +69,7 @@ pal <- colorNumeric(palette = "viridis", domain = NULL)
 # Update choropleth function
 update_choropleth <- function(mymap, tract_census, chor_vars) {
   
-  leafletProxy(mymap, data = df) %>% 
+  leafletProxy(mymap) %>% 
     addPolygons(data = tract_census, weight = 1, color = "white",
                 highlightOptions = highlightOptions(weight = 5, color = "white", bringToFront = T),
                 label = ~sprintf("<strong>%s</strong><br/>%d", 
@@ -71,16 +80,5 @@ update_choropleth <- function(mymap, tract_census, chor_vars) {
                 fillColor = ~pal(tract_census@data[[chor_vars]]), fillOpacity = 0.9)
 }
 
-# Draw map legend function
-draw_map_legend <- function(mymap, tract_census, chor_vars) {
-  leafletProxy(mymap, data = tract_census) %>%
-    clearControls() %>%
-    addLegend(
-      "bottomleft",
-      pal = pal, 
-      values = tract_census@data[[chor_vars]], # need to change with input
-      title = ~ str_to_title(chor_vars), # needs to change with input
-      opacity = 1
-    )
-}
+
 
