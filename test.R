@@ -21,8 +21,9 @@ leaflet(data = df, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>%
   setView(lat = 36.163934, lng = -86.774893, zoom = 10) %>% 
   addLegend(pal = pal_test, values = tract_census@data$median_income, title = "Median Income")
               
-              
-              
-  
+df %>% write_rds(file = "data/df.rds")          
+tract_census %>% write_rds(file = "data/tract_census.rds")              
+
+
 
 
