@@ -16,12 +16,14 @@ shinyUI(
                   right = 10,
                   selectInput("chor_vars", 
                               "Choropleth Variables", 
-                              c(choro_variables))),
+                              c(choro_variables)
+                              )
+                  ),
     absolutePanel(bottom = 10, 
                   right = 10,
                   selectizeInput("req_vars", 
                                  "Types of Requests", 
-                                 c(distinct(df, case_request)),
+                                 c(req_variables),
                                  options = list(
                                    placeholder = ("Select a case request type"),
                                    onInitialize = I('function() { this.setValue(""); }')

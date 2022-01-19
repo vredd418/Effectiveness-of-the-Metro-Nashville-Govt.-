@@ -13,7 +13,7 @@ shinyServer(function(input, output) {
     # Filter df based on case request selection
     df_filtered <- reactive({
       df %>%
-        filter(case_request == as.character(input$req_vars))
+        filter(case_request == input$req_vars)
     })
     
     # Update choropleth on choropleth variable selection
@@ -21,10 +21,10 @@ shinyServer(function(input, output) {
       update_choropleth("mymap", tract_census, input$chor_vars)
     })
     
-    # Update markers on case_request selection
-    observeEvent(input$req_vars, {
-      update_data_points("mymap", df_filtered())
-    })
+    # # Update markers on case_request selection
+    # observeEvent(input$req_vars, {
+    #   update_data_points("mymap", df_filtered())
+    # })
     
     # Update map legend based on choropleth variable selection
     observeEvent(input$chor_vars, {

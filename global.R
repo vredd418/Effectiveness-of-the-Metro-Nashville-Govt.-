@@ -55,10 +55,16 @@ tract_census <- read_rds(file = "data/tract_census.rds")
 # Filter out point data outside of Davidson County
 #df_filtered <- st_join(df, tract_census, join = st_contains)
 
+# Color palette for choropleth 
+pal <- colorNumeric(palette = "viridis", domain = NULL)
+
 # Choices for choropleth variable 
 choro_variables <- variable.names(subset(tract_census@data, 
                                          select = c(white, asian, hispanic, black, 
                                                     population, median_age, median_income)))
+
+# Choices for case request variable
+req_variables <- c(distinct(df, case_request))
 
 # Initialize leaflet map function
 draw_base_map <- function(df) {
@@ -82,8 +88,7 @@ update_data_points <- function(mymap, df) {
                                 df[[case_subrequest]], df[[duration]], " seconds") %>% lapply(HTML))
 }
 
-# Color palette for choropleth 
-pal <- colorNumeric(palette = "viridis", domain = NULL)
+
 
 # Update choropleth function
 update_choropleth <- function(mymap, tract_census, chor_vars) {
