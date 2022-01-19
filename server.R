@@ -12,7 +12,7 @@ shinyServer(function(input, output) {
     
     # Filter df based on case request selection
     df_filtered <- reactive({
-      df %>%
+      df <- df %>%
         filter(case_request == input$req_vars)
     })
     

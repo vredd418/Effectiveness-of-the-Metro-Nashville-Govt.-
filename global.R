@@ -14,20 +14,21 @@ library(stats)
 library(scales)
 census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 
-# # Read in Metro Nashville Govt data
-# df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>%
-#   subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
-#                         "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>%
-#   filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>%
-#   filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.))) %>%
-#   mutate_at(vars(mapped_location.latitude, mapped_location.longitude), as.numeric) %>%
-#   mutate(duration = date_time_closed - date_time_opened) %>%
-#   st_as_sf(., coords = c("mapped_location.latitude", "mapped_location.longitude"), crs = 4269, remove = F)
-# 
-# # Read in census tract shape file
-# tract <- readOGR(dsn = "C:/Users/vredd/Documents/data_science_projects/Midcourse project/Effectiveness-of-the-Metro-Nashville-Govt.-/data",
-#                 layer = "tl_2019_47_tract") %>%
-#   subset(., COUNTYFP %in% "037")
+# Read in Metro Nashville Govt data
+df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>%
+  subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
+                        "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>%
+  filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>%
+  filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.))) %>%
+  mutate_at(vars(mapped_location.latitude, mapped_location.longitude), as.numeric) %>%
+  mutate(duration = date_time_closed - date_time_opened) %>%
+  st_as_sf(., coords = c("mapped_location.longitude", "mapped_location.latitude"), crs = 4269, remove = F, agr = "constant")
+#  
+# Read in census tract shape file
+tract <- readOGR(dsn = "C:/Users/vredd/Documents/data_science_projects/Midcourse project/Effectiveness-of-the-Metro-Nashville-Govt.-/data",
+                layer = "tl_2019_47_tract") %>%
+  subset(., COUNTYFP %in% "037") %>% 
+  st_as_sf(., crs = 4269)
 # 
 # # Read in census data
 # census <- get_acs(geography = "tract",
@@ -42,18 +43,32 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 #   mutate_at(vars(asian, black, hispanic, white), ~./population)
 # 
 # 
-# # Merge census and tract data
-# tract_census <- geo_join(tract, census, by = "GEOID") %>%
-#   .[,-(13:14)]
+# Merge census and tract data
+tract_census <- geo_join(tract, census, by = "GEOID") %>%
+  .[,-(13:14)] 
+
+tract_census <- st_as_sf(tract_census, 
+                         crs = 4269, 
+                         agr = c(STATEFP = "identity", COUNTYFP = "identity", 
+                                 TRACTCE = "identity", GEOID = "identity", 
+                                 NAME = "identity", NAMELSAD = "identity",
+                                 MTFCC = "constant", FUNCSTAT = "constant", ALAND = "aggregate",
+                                 AWATER = "aggregate", asian = "aggregate", black = "aggregate",
+                                 hispanic = "aggregate", white = "aggregate", population = "aggregate",
+                                 median_age = "aggregate", median_income = "aggregate"))
+
+
+
+
 
 df <- read_rds(file = "data/df.rds")
 tract_census <- read_rds(file = "data/tract_census.rds")
+all_data <- read_rds(file = "data/all_data.rds")
 
-# Convert to sf in order to filter out points outside of Davidson County
-#tract_census <- st_as_sf(tract_census)
+# # Merge all data and filter points outside of Davidson County
+all_data <- st_join(df, tract_census, join = st_within) %>% 
+  drop_na(STATEFP)
 
-# Filter out point data outside of Davidson County
-#df_filtered <- st_join(df, tract_census, join = st_contains)
 
 # Color palette for choropleth 
 pal <- colorNumeric(palette = "viridis", domain = NULL)
@@ -64,16 +79,16 @@ choro_variables <- variable.names(subset(tract_census@data,
                                                     population, median_age, median_income)))
 
 # Choices for case request variable
-req_variables <- c(distinct(df, case_request))
+req_variables <- c(distinct(all_data, case_request))
 
 # Initialize leaflet map function
-draw_base_map <- function(df) {
-  leaflet(data = df, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>%
+draw_base_map <- function(all_data) {
+  leaflet(data = all_data, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>%
     addProviderTiles("CartoDB.Positron") %>% 
     addMarkers(lat = ~mapped_location.latitude, lng = ~mapped_location.longitude,
                clusterOptions = markerClusterOptions(),
-               label = ~sprintf("<strong>%s</strong><br/>%s<br/>%d%s", case_request, 
-                                case_subrequest, duration, " seconds") %>% lapply(HTML)) %>% 
+               label = ~sprintf("<strong>%s</strong><br/>%s<br/>%.3f%s", case_request, 
+                                case_subrequest, duration/3600, " hours") %>% lapply(HTML)) %>% 
     setView(lat = 36.163934, lng = -86.774893, zoom = 10)
 }
 

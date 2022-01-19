@@ -4,26 +4,34 @@ library(htmltools)
 
 choro_variables <- variable.names(subset(tract_census@data, select = c(white, asian, hispanic, black, population, median_age, median_income)))
 
-pal_test <- colorNumeric("viridis", domain = tract_census@data$median_income)
+pal_test <- colorNumeric("viridis", domain = all_data$median_income)
 
-leaflet(data = df, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>% 
+leaflet(data = all_data, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addMarkers(lat = ~mapped_location.latitude, lng = ~mapped_location.longitude, 
              label = ~sprintf("<strong>%s</strong><br/>%s<br/>%d%s", case_request, 
                               case_subrequest, duration, " seconds") %>% lapply(HTML),
              clusterOptions = markerClusterOptions()) %>% 
-  addPolygons(data = tract_census, weight = 1, color = "white",
+  addPolygons(data = all_data, weight = 1, color = "white",
               highlightOptions = highlightOptions(weight = 5, color = "white", bringToFront = T),
               label = ~sprintf("<strong>%s</strong><br/>%d", NAMELSAD, median_income) %>% lapply(HTML),
               labelOptions = labelOptions(style = list("font_weight" = "normal", padding = "3px 8px"), 
                                           textsize = "15px", direction = "auto"),
               fillColor = ~pal_test(median_income), fillOpacity = .9) %>% 
   setView(lat = 36.163934, lng = -86.774893, zoom = 10) %>% 
-  addLegend(pal = pal_test, values = tract_census@data$median_income, title = "Median Income")
+  addLegend(pal = pal_test, values = all_data$median_income, title = "Median Income")
               
 df %>% write_rds(file = "data/df.rds")          
 tract_census %>% write_rds(file = "data/tract_census.rds")              
+all_data %>% write_rds(file = "data/all_data.rds")
 
 
 
-
+test_census <- get_acs(geography = "tract",
+                       variables = c(median_income = "B06011_001", population = "B01001_001",
+                                     white = "B01001H_001", asian = "C02003_006", hispanic = "B01001I_001",
+                                     black = "C02003_004", median_age = "B01002_001"),
+                       state = "TN",
+                       county = 37,
+                       year = 2019) %>%
+  select(., -c(moe))
