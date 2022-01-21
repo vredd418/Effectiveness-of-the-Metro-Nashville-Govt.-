@@ -22,9 +22,7 @@ leaflet(data = test_data, options = leafletOptions(minZoom = 10, maxZoom = 17)) 
   setView(lat = 36.163934, lng = -86.774893, zoom = 10) %>% 
   addLegend(pal = pal_test, values = test_data$median_income, title = "Median Income")
               
-df %>% write_rds(file = "data/df.rds")          
-tract_census %>% write_rds(file = "data/tract_census.rds")              
-all_data %>% write_rds(file = "data/all_data.rds")
+
 
 
 
@@ -46,4 +44,6 @@ test_df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>
   mutate(duration = date_time_closed - date_time_opened)
 
 
-geo_all_data <- geojsonsf::sf_geojson(all_data, )
+
+
+

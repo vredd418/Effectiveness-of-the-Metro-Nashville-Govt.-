@@ -17,17 +17,17 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 # # Read in Metro Nashville Govt data
 # df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>%
 #   subset(., select = c("status", "case_request", "case_subrequest", "additional_subrequest", "date_time_opened",
-#                         "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>%
+#                        "date_time_closed", "mapped_location.latitude", "mapped_location.longitude")) %>%
 #   filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>%
 #   filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.))) %>%
 #   mutate_at(vars(mapped_location.latitude, mapped_location.longitude), as.numeric) %>%
 #   mutate(duration = date_time_closed - date_time_opened) %>%
 #   st_as_sf(., coords = c("mapped_location.longitude", "mapped_location.latitude"), crs = 4269, remove = F, agr = "constant")
-# #  
+# 
 # # Read in census tract shape file
 # tract <- readOGR(dsn = "C:/Users/vredd/Documents/data_science_projects/Midcourse project/Effectiveness-of-the-Metro-Nashville-Govt.-/data",
-#                 layer = "tl_2019_47_tract") %>%
-#   subset(., COUNTYFP %in% "037") %>% 
+#                  layer = "tl_2019_47_tract") %>%
+#   subset(., COUNTYFP %in% "037") %>%
 #   st_as_sf(., crs = 4269)
 # 
 # # Read in census data
@@ -43,24 +43,29 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 #   mutate_at(vars(asian, black, hispanic, white), ~./population)
 # 
 # 
-# Merge census and tract data
-# tract_census <- geo_join(tract, census, by = "GEOID") %>%
-#   .[,-(13:14)] 
+# # Merge census and tract data
+# tract_census <- geo_join(tract, census, by = "GEOID") 
+#
 # 
-# tract_census <- st_as_sf(tract_census, 
-#                          crs = 4269, 
-#                          agr = c(STATEFP = "identity", COUNTYFP = "identity", 
-#                                  TRACTCE = "identity", GEOID = "identity", 
+# tract_census <- st_as_sf(tract_census,
+#                          crs = 4269,
+#                          agr = c(STATEFP = "identity", COUNTYFP = "identity",
+#                                  TRACTCE = "identity", GEOID = "identity",
 #                                  NAME = "identity", NAMELSAD = "identity",
 #                                  MTFCC = "constant", FUNCSTAT = "constant", ALAND = "aggregate",
 #                                  AWATER = "aggregate", asian = "aggregate", black = "aggregate",
 #                                  hispanic = "aggregate", white = "aggregate", population = "aggregate",
 #                                  median_age = "aggregate", median_income = "aggregate"))
-
+#
+# # Merge all data and filter points outside of Davidson County
+# all_data <- st_join(df, tract_census, join = st_within) %>%
+#   drop_na(STATEFP)
+#  
 # all_data <- all_data %>%
 #   group_by(case_request) %>%
 #   mutate(med_inc_by_request = median(median_income, na.rm = T),
 #          med_age_by_request = median(median_age, na.rm = T),
+#          med_duration_by_request = median(duration, na.rm = T),
 #          num_request = n()) %>%
 #   group_by(GEOID, case_request) %>%
 #   mutate(requests_per_tract = n()) %>%
@@ -68,24 +73,26 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 #   mutate(sub_requests_per_tract = n()) %>%
 #   group_by(GEOID) %>%
 #   mutate(median_duration_by_tract = paste(sprintf("%.2f", median(duration)/86400), "days"))
+# 
+# # Save files as .rds
+# tract_census %>% write_rds(file = "data/tract_census.rds")
+# all_data %>% write_rds(file = "data/all_data.rds")
 
 
 # df <- read_rds(file = "data/df.rds")
 tract_census <- read_rds(file = "data/tract_census.rds")
 all_data <- read_rds(file = "data/all_data.rds")
 
-# # Merge all data and filter points outside of Davidson County
-# all_data <- st_join(df, tract_census, join = st_within) %>% 
-#   drop_na(STATEFP)
+
 
 
 # Color palette for choropleth 
 pal <- colorNumeric(palette = "viridis", domain = NULL)
 
 # Choices for choropleth variable 
-choro_variables <- variable.names(subset(tract_census@data, 
+choro_variables <- variable.names(subset(tract_census, 
                                          select = c(white, asian, hispanic, black, 
-                                                    population, median_age, median_income)))
+                                                    population, median_age, median_income)))[-8]
 
 # Choices for case request variable
 req_variables <- c(distinct(all_data, case_request))
@@ -122,11 +129,11 @@ update_choropleth <- function(mymap, tract_census, chor_vars) {
     addPolygons(data = tract_census, weight = 1, color = "white",
                 highlightOptions = highlightOptions(weight = 5, color = "white", bringToFront = T),
                 label = ~sprintf("<strong>%s</strong><br/>%.2f", 
-                                 tract_census@data$NAMELSAD, 
-                                 tract_census@data[[chor_vars]]) %>% lapply(HTML),
+                                 tract_census$NAMELSAD, 
+                                 tract_census[[chor_vars]]) %>% lapply(HTML),
                 labelOptions = labelOptions(style = list("font_weight" = "normal", padding = "3px 8px",
                                                          textsize = "15px", direction = "auto")),
-                fillColor = ~pal(tract_census@data[[chor_vars]]), fillOpacity = 0.7)
+                fillColor = ~pal(tract_census[[chor_vars]]), fillOpacity = 0.7)
 }
 
 # Draw map legend function
@@ -142,3 +149,5 @@ draw_map_legend <- function(mymap, tract_census, chor_vars) {
     )
 }
 
+
+ 
