@@ -12,6 +12,7 @@ library(prevR)
 library(leaflet)
 library(stats)
 library(scales)
+library(ggstatsplot)
 census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 
 # # Read in Metro Nashville Govt data
@@ -58,30 +59,40 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 # # Merge all data and filter points outside of Davidson County
 # all_data <- st_join(df, tract_census, join = st_within) %>%
 #   drop_na(STATEFP)
-# 
+
 # Create grouping columns for EDA
 # all_data <- all_data %>%
-#   group_by(case_request) %>%
-#   mutate(med_inc_by_request = median(median_income, na.rm = T),
-#          mean_inc_by_request = mean(median_income, na.rm = T),
-#          med_age_by_request = median(median_age, na.rm = T),
-#          med_duration_by_request = median(duration, na.rm = T),
-#          num_request_type = n()) %>%
-#   group_by(GEOID, case_request) %>%
-#   mutate(request_type_per_tract = n()) %>%
-#   group_by(GEOID, case_request, case_subrequest) %>%
-#   mutate(subrequest_type_per_tract = n()) %>%
 #   group_by(GEOID) %>%
-#   mutate(median_duration_by_tract = median(duration, na.rm = T),
-#          mean_duration_by_tract = mean(duration, na.rm = T),
-#          num_requests_by_tract = n()) %>%
+#   mutate(gr_tract_median_duration = median(duration, na.rm = T),
+#          gr_tract_mean_duration = mean(duration, na.rm = T),
+#          gr_tract_sum_requests = n()) %>%
+#   ungroup() %>% 
+#   group_by(case_request) %>%
+#   mutate(gr_request_median_inc = median(median_income, na.rm = T),
+#          gr_request_mean_inc = mean(median_income, na.rm = T),
+#          gr_request_median_age = median(median_age, na.rm = T),
+#          gr_request_mean_age = mean(median_age, na.rm = T),
+#          gr_request_median_duration = median(duration, na.rm = T),
+#          gr_request_mean_duration = mean(duration, na.rm = T),
+#          gr_requests_sum = n()) %>%
+#   ungroup() %>% 
+#   group_by(GEOID, case_request) %>%
+#   mutate(gr_tract.request_median_duration = median(duration, na.rm = T),
+#          gr_tract.request_mean_duration = mean(duration, na.rm = T),
+#          gr_tract.request_sum = n()) %>%
+#   ungroup() %>% 
+#   group_by(GEOID, case_request, case_subrequest) %>%
+#   mutate(gr_tract.request.sub_median_duration = median(duration, na.rm = T),
+#          gr_tract.request.sub_mean_duration = mean(duration, na.rm = T),
+#          gr_tract.request_sum = n()) %>%
 #   ungroup()
+
 # 
-# # Data for scatterplot
-# scatter_data <- st_drop_geometry(all_data) %>% 
-#   select(NAMELSAD, asian, black, hispanic, white, population, median_age, median_income, median_duration_by_tract, mean_duration_by_tract, num_requests_by_tract) %>% 
-#   mutate(median_duration_by_tract = as.numeric(median_duration_by_tract),
-#          mean_duration_by_tract = as.numeric(mean_duration_by_tract))
+# Data for scatterplot
+# scatter_data <- st_drop_geometry(all_data) %>%
+#   select(NAMELSAD, asian, black, hispanic, white, population, median_age, median_income, gr_tract_median_duration, gr_tract_mean_duration, gr_tract_sum_requests) %>%
+#   mutate(gr_tract_median_duration = as.numeric(gr_tract_median_duration),
+#          gr_tract_mean_duration = as.numeric(gr_tract_mean_duration))
 # scatter_data <- scatter_data[!duplicated(scatter_data), ]
 #
 # # Save files as .rds
@@ -107,14 +118,83 @@ choro_variables <- variable.names(subset(tract_census,
 # Choices for case request variable
 req_variables <- c(distinct(all_data, case_request))
 
+# List for marker icons
+icons <- awesomeIconList(
+  "Streets, Roads & Sidewalks" = makeAwesomeIcon(
+    icon = "road",
+    library = "fa"
+  ),
+  "Trash, Recycling & Litter" = makeAwesomeIcon(
+    icon = "trash",
+    library = "fa"
+  ),
+  "Resolved by hubNashville on First Call" = makeAwesomeIcon(
+    icon = "fighter-jet",
+    library = "fa"
+  ),
+  "Submit Budget Ideas to Mayor Briley" = makeAwesomeIcon(
+    icon = "money-bill-wave",
+    library = "fa"
+  ),
+  "Electric & Water General" = makeAwesomeIcon(
+    icon = "water",
+    library = "fa"
+  ),
+  "Public Safety" = makeAwesomeIcon(
+    icon = "user-shield",
+    library = "fa"
+  ),
+  "Transit" = makeAwesomeIcon(
+    icon = "bus",
+    library = "fa"
+  ),
+  "Public Records Request" = makeAwesomeIcon(
+    icon = "scroll",
+    library = "fa"
+  ),
+  "Social Services & Housing" = makeAwesomeIcon(
+    icon = "home",
+    library = "fa"
+  ),
+  "Property Violations" = makeAwesomeIcon(
+    icon = "house-damage",
+    library = "fa"
+  ),
+  "Permits" = makeAwesomeIcon(
+    icon = "sticky_note",
+    library = "fa"
+  ),
+  "Planning & Zoning" = makeAwesomeIcon(
+    icon = "buffer",
+    library = "fa"
+  ),
+  "Parks" = makeAwesomeIcon(
+    icon = "pagelines",
+    library = "fa"
+  ),
+  "Other Metro Services and Forms" = makeAwesomeIcon(
+    icon = "clipboard",
+    library = "fa"
+  ),
+  "Education & Libraries" = makeAwesomeIcon(
+    icon = "university",
+    library = "fa"
+  ),
+  "Workforce & Jobs" = makeAwesomeIcon(
+    icon = "hard-hat",
+    library = "fa"
+  )
+)
+
 # Initialize leaflet map function
 draw_base_map <- function(all_data) {
   leaflet(data = all_data, options = leafletOptions(minZoom = 10, maxZoom = 17)) %>%
     addProviderTiles("CartoDB.Positron") %>% 
-    addMarkers(lat = ~mapped_location.latitude, lng = ~mapped_location.longitude,
+    addAwesomeMarkers(lat = ~mapped_location.latitude, lng = ~mapped_location.longitude,
+                      icon = ~ icons[case_request],
                clusterOptions = markerClusterOptions(),
                label = ~sprintf("<strong>%s</strong><br/>%s<br/>%s", case_request, 
-                                case_subrequest, median_duration_by_tract) %>% lapply(HTML)) %>% 
+                                case_subrequest, gr_tract_median_duration) %>% lapply(HTML)) %>% 
     setView(lat = 36.163934, lng = -86.774893, zoom = 10)
 }
 
@@ -127,7 +207,7 @@ update_data_points <- function(mymap, all_data) {
     addMarkers(data = df, lat = all_data[["mapped_location.latitude"]], lng = all_data[["mapped_location.longitude"]],
                clusterOptions = markerClusterOptions(),
                label = sprintf("<strong>%s</strong><br/>%s<br/>%s", all_data[["case_request"]],
-                               all_data[["case_subrequest"]], all_data[["median_duration_by_tract"]]) %>% 
+                               all_data[["case_subrequest"]], all_data[["gr_tract_median_duration"]]) %>% 
                  lapply(HTML))
 }
 

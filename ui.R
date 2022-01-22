@@ -44,11 +44,12 @@ library(htmltools)
 # )
 
 shinyUI(
-  navbarPage("Nashville Metro Govt",
+  navbarPage("",
              tabPanel("Map",
                       leafletOutput("mymap",
                                     width = "100%",
-                                    height = "800px"),
+                                    height = "900px"),
+                      actionButton("reset_button", "Reset View"),
                       absolutePanel(top = 100,
                                     right = 10,
                                     selectInput("chor_vars",
@@ -68,26 +69,31 @@ shinyUI(
                                     )
                       )
              ),
-             tabPanel("Analysis",
+             tabPanel("Correlation",
                       sidebarLayout(
                         sidebarPanel(
-                          selectInput("x_var",
-                                      "X Variable:",
-                                      c(names(scatter_data)[-1]),
-                                      selected = F),
-                          br(),
                           selectInput("y_var",
-                                      "Y variable:",
+                                      "Y Variable:",
                                       c(names(scatter_data)[-1]),
-                                      selected = F)
+                                      selected = "gr_tract_median_duration"),
+                          br(),
+                          selectInput("x_var",
+                                      "X variable:",
+                                      c(names(scatter_data)[-1]),
+                                      selected = "median_income")
                         ),
                         mainPanel(
                           plotOutput("scatter",
                                      width = "100%",
-                                     height = "500px")
+                                     height = "900px")
                         ),
                         position = "left",
                         fluid = TRUE
+                      )
+             ),
+             tabPanel("Data",
+                      mainPanel( 
+                        dataTableOutput("table")
                       )
              )
   )

@@ -4,16 +4,24 @@ library(leaflet)
 
 shinyServer(function(input, output) {
 
-    # Draw base map  
+    # Draw base map
     output$mymap <- renderLeaflet({
       map <- draw_base_map(all_data)
       #map
     })
     
+    
     # Filter df based on case request selection
     data_filtered <- reactive({
       all_data <- all_data %>%
         filter(case_request == input$req_vars)
+    })
+    
+    # Reset zoom on action button click
+    observe({
+      input$reset_button
+      leafletProxy("mymap") %>% 
+        setView(lat = 36.163934, lng = -86.774893, zoom = 10)
     })
     
     # Update choropleth on choropleth variable selection
@@ -59,6 +67,14 @@ shinyServer(function(input, output) {
                     col = "#c42126",
                     se = F,
                     size = 1)
+    })
+    
+    output$table <- renderDataTable({
+      all_data %>% 
+        select(-c(status, STATEFP, COUNTYFP, TRACTCE, GEOID, 
+                  NAME.x, MTFCC, FUNCSTAT, ALAND, AWATER, INTPTLAT,
+                  INTPTLON, NAME.y, geometry)) %>% 
+        st_drop_geometry()
     })
     
 })
