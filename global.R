@@ -21,7 +21,7 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 #   filter(year(date_time_opened) == 2019 & year(date_time_closed) == 2019) %>%
 #   filter_at(vars(mapped_location.latitude, mapped_location.longitude), all_vars(!is.na(.))) %>%
 #   mutate_at(vars(mapped_location.latitude, mapped_location.longitude), as.numeric) %>%
-#   mutate(duration = date_time_closed - date_time_opened) %>%
+#   mutate(duration = difftime(date_time_closed, date_time_opened, units = "days")) %>%
 #   st_as_sf(., coords = c("mapped_location.longitude", "mapped_location.latitude"), crs = 4269, remove = F, agr = "constant")
 # 
 # # Read in census tract shape file
@@ -44,46 +44,48 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 # 
 # 
 # # Merge census and tract data
-# tract_census <- geo_join(tract, census, by = "GEOID") 
-#
+# tract_census <- geo_join(tract, census, by = "GEOID") %>%
+#   st_as_sf(tract_census,
+#            crs = 4269,
+#            agr = c(STATEFP = "identity", COUNTYFP = "identity",
+#                    TRACTCE = "identity", GEOID = "identity",
+#                    NAME = "identity", NAMELSAD = "identity",
+#                    MTFCC = "constant", FUNCSTAT = "constant", ALAND = "aggregate",
+#                    AWATER = "aggregate", asian = "aggregate", black = "aggregate",
+#                    hispanic = "aggregate", white = "aggregate", population = "aggregate",
+#                    median_age = "aggregate", median_income = "aggregate"))
 # 
-# tract_census <- st_as_sf(tract_census,
-#                          crs = 4269,
-#                          agr = c(STATEFP = "identity", COUNTYFP = "identity",
-#                                  TRACTCE = "identity", GEOID = "identity",
-#                                  NAME = "identity", NAMELSAD = "identity",
-#                                  MTFCC = "constant", FUNCSTAT = "constant", ALAND = "aggregate",
-#                                  AWATER = "aggregate", asian = "aggregate", black = "aggregate",
-#                                  hispanic = "aggregate", white = "aggregate", population = "aggregate",
-#                                  median_age = "aggregate", median_income = "aggregate"))
-#
 # # Merge all data and filter points outside of Davidson County
 # all_data <- st_join(df, tract_census, join = st_within) %>%
 #   drop_na(STATEFP)
-#  
+# 
+# Create grouping columns for EDA
 # all_data <- all_data %>%
 #   group_by(case_request) %>%
 #   mutate(med_inc_by_request = median(median_income, na.rm = T),
+#          mean_inc_by_request = mean(median_income, na.rm = T),
 #          med_age_by_request = median(median_age, na.rm = T),
 #          med_duration_by_request = median(duration, na.rm = T),
-#          num_request = n()) %>%
+#          num_request_type = n()) %>%
 #   group_by(GEOID, case_request) %>%
-#   mutate(requests_per_tract = n()) %>%
+#   mutate(request_type_per_tract = n()) %>%
 #   group_by(GEOID, case_request, case_subrequest) %>%
-#   mutate(sub_requests_per_tract = n()) %>%
+#   mutate(subrequest_type_per_tract = n()) %>%
 #   group_by(GEOID) %>%
-#   mutate(median_duration_by_tract = paste(sprintf("%.2f", median(duration)/86400), "days"))
+#   mutate(median_duration_by_tract = median(duration, na.rm = T),
+#          mean_duration_by_tract = mean(duration, na.rm = T),
+#          num_requests_by_tract = n()) %>%
+#   ungroup()
 # 
 # # Save files as .rds
+# df %>% write_rds(file = "data/df.rds")
 # tract_census %>% write_rds(file = "data/tract_census.rds")
 # all_data %>% write_rds(file = "data/all_data.rds")
 
 
-# df <- read_rds(file = "data/df.rds")
+# Read in files
 tract_census <- read_rds(file = "data/tract_census.rds")
 all_data <- read_rds(file = "data/all_data.rds")
-
-
 
 
 # Color palette for choropleth 

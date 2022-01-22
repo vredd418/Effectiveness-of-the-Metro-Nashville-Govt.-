@@ -2,6 +2,7 @@ library(leaflet)
 library(stats)
 library(htmltools)
 library(geojson)
+library(ggplot2)
 
 choro_variables <- variable.names(subset(tract_census@data, select = c(white, asian, hispanic, black, population, median_age, median_income)))
 
@@ -44,6 +45,10 @@ test_df <- read.socrata("https://data.nashville.gov/resource/7qhx-rexh.json") %>
   mutate(duration = date_time_closed - date_time_opened)
 
 
+tract_specifc <- distinct(all_data, GEOID, .keep_all = T)
+view(tract_specifc %>% arrange())
 
+cor(tract_specifc$black, log(as.numeric(tract_specifc$duration)), use = "na.or.complete")
 
-
+ggplot(tract_specifc, aes(x = black, y = log(as.numeric(duration)/3600))) +
+  geom_point()
