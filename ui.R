@@ -48,15 +48,15 @@ shinyUI(
              tabPanel("Map",
                       leafletOutput("mymap",
                                     width = "100%",
-                                    height = "60px"),
-                      absolutePanel(top = 10,
+                                    height = "800px"),
+                      absolutePanel(top = 100,
                                     right = 10,
                                     selectInput("chor_vars",
                                                 "Choropleth Variables",
                                                 c(choro_variables)
                                     ),
                       ),
-                      absolutePanel(bottom = 10,
+                      absolutePanel(bottom = 100,
                                     right = 10,
                                     selectizeInput("req_vars",
                                                    "Types of Requests",
@@ -69,7 +69,26 @@ shinyUI(
                       )
              ),
              tabPanel("Analysis",
-                      h4("Something here")
+                      sidebarLayout(
+                        sidebarPanel(
+                          selectInput("x_var",
+                                      "X Variable:",
+                                      c(names(scatter_data)[-1]),
+                                      selected = F),
+                          br(),
+                          selectInput("y_var",
+                                      "Y variable:",
+                                      c(names(scatter_data)[-1]),
+                                      selected = F)
+                        ),
+                        mainPanel(
+                          plotOutput("scatter",
+                                     width = "100%",
+                                     height = "500px")
+                        ),
+                        position = "left",
+                        fluid = TRUE
+                      )
              )
   )
 )

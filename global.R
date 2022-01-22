@@ -77,16 +77,24 @@ census_api_key("86875983b50f2fae4cdb9463bafa4f584c31b2f8")
 #          num_requests_by_tract = n()) %>%
 #   ungroup()
 # 
+# # Data for scatterplot
+# scatter_data <- st_drop_geometry(all_data) %>% 
+#   select(NAMELSAD, asian, black, hispanic, white, population, median_age, median_income, median_duration_by_tract, mean_duration_by_tract, num_requests_by_tract) %>% 
+#   mutate(median_duration_by_tract = as.numeric(median_duration_by_tract),
+#          mean_duration_by_tract = as.numeric(mean_duration_by_tract))
+# scatter_data <- scatter_data[!duplicated(scatter_data), ]
+#
 # # Save files as .rds
 # df %>% write_rds(file = "data/df.rds")
 # tract_census %>% write_rds(file = "data/tract_census.rds")
 # all_data %>% write_rds(file = "data/all_data.rds")
+# scatter_data %>% write_rds(file = "data/scatter_data.rds")
 
 
 # Read in files
 tract_census <- read_rds(file = "data/tract_census.rds")
 all_data <- read_rds(file = "data/all_data.rds")
-
+scatter_data <- read_rds(file = "data/scatter_data.rds")
 
 # Color palette for choropleth 
 pal <- colorNumeric(palette = "viridis", domain = NULL)
@@ -135,7 +143,11 @@ update_choropleth <- function(mymap, tract_census, chor_vars) {
                                  tract_census[[chor_vars]]) %>% lapply(HTML),
                 labelOptions = labelOptions(style = list("font_weight" = "normal", padding = "3px 8px",
                                                          textsize = "15px", direction = "auto")),
-                fillColor = ~pal(tract_census[[chor_vars]]), fillOpacity = 0.7)
+                stroke = F,
+                fillColor = ~pal(tract_census[[chor_vars]]), 
+                fillOpacity = 0.7,
+                smoothFactor = 0.5,
+                layerId = tract_census$NAMELSAD)
 }
 
 # Draw map legend function

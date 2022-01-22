@@ -52,6 +52,15 @@ shinyServer(function(input, output) {
         ggplot() + geom_col(aes(x = Race, y = `Percentage of Tract Pop`))
     })
     
+    output$scatter <- renderPlot({
+      ggplot(data = scatter_data, aes_string(x = input$x_var, y = input$y_var)) +
+        geom_point() +
+        stat_smooth(method = "lm",
+                    col = "#c42126",
+                    se = F,
+                    size = 1)
+    })
+    
 })
 
 
