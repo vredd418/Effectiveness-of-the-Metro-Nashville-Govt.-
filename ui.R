@@ -48,7 +48,7 @@ shinyUI(
              tabPanel("Map",
                       leafletOutput("mymap",
                                     width = "100%",
-                                    height = "900px"),
+                                    height = "800px"),
                       actionButton("reset_button", "Reset View"),
                       absolutePanel(top = 100,
                                     right = 10,
@@ -57,7 +57,7 @@ shinyUI(
                                                 c(choro_variables)
                                     ),
                       ),
-                      absolutePanel(bottom = 100,
+                      absolutePanel(bottom = 200,
                                     right = 10,
                                     selectizeInput("req_vars",
                                                    "Types of Requests",
